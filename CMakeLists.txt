@@ -1,50 +1,29 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.0)
 
 project(BackendApp VERSION 0.1
-  DESCRIPTION "A learning experience."
   LANGUAGES C)
 
-# if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libdialog.a")
-#   execute_process(
-#     COMMAND ./configure
-# #    COMMAND make
-#     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/dialog
-#     RESULT_VARIABLE DIALOG_COMPILATION_RESULT
-#     COMMAND_ERROR_IS_FATAL ANY
-#   )
-#   if(NOT DIALOG_COMPILATION_RESULT EQUAL "0")
-#     message(FATAL_ERROR "Dialog compilation unsuccessful. Aboring.")
-#   endif()
-# endif()
+# Configure dialog.
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/dialog/config.status")
+  execute_process(COMMAND ./configure
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/dialog"
+    RESULT_VARIABLE DIALOG_COMPILATION_RESULT)
+  if(NOT DIALOG_COMPILATION_RESULT EQUAL "0")
+    message(FATAL_ERROR "Configuration failed. Aboring.\nPlease read the INSTALL file.")
+  endif()
+endif()
 
-execute_process(COMMAND ./configure
-  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/dialog"
-  RESULT_VARIABLE DIALOG_COMPILATION_RESULT
-  COMMAND_ERROR_IS_FATAL ANY)
-
-# add_custom_command(OUTPUT /dev/null
-#   COMMAND make
-#   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/dialog)
-
-# if(NOT EXISTS "${PROJECT_SOURCE_DIR}/libdialog.a")
-#   message(FATAL_ERROR "Dialog compilation unsuccessful. Aboring.")
-# endif()
-
+# Compile dialog.
 add_custom_command(OUTPUT "${PROJECT_SOURCE_DIR}/dialog/libdialog.a"
-  COMMAND make
+  COMMAND make -j$(nproc) libdialog.a
   WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/dialog")
-
 add_custom_target(compile_dialog ALL
   DEPENDS "${PROJECT_SOURCE_DIR}/dialog/libdialog.a")
 
-find_library(DIALOG
-  NAMES libdialog.a
-  PATHS ${PROJECT_SOURCE_DIR}/dialog)
-
 include_directories("${PROJECT_SOURCE_DIR}/dialog")
-add_executable(backendapp main.c)
-target_link_libraries(backendapp ${DIALOG} ncurses m)
-#link_directories(BEFORE "${PROJECT_SOURCE_DIR}/dialog/")
-# link_directories("${PROJECT_SOURCE_DIR}/dialog/libdialog.a")
+link_directories("${PROJECT_SOURCE_DIR}/dialog")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-#target_link_libraries(backendapp PRIVATE ${PROJECT_SOURCE_DIR}/dialog/libdialog.a)
+add_executable(backendapp main.c)
+target_link_libraries(backendapp libdialog.a ncurses m)
+add_dependencies(backendapp compile_dialog)
