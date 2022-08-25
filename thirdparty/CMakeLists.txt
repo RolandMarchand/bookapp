@@ -1,5 +1,4 @@
 # Configure dialog.
-# message(FATAL_ERROR ${CMAKE_CURRENT_SOURCE_DIR})
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/dialog/config.status")
   execute_process(COMMAND ./configure
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dialog"
@@ -10,11 +9,10 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/dialog/config.status")
 endif()
 
 # Compile dialog.
-add_custom_command(OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/dialog/libdialog.a"
+add_custom_command(OUTPUT "dialog/libdialog.a"
   COMMAND make -j libdialog.a
   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/dialog")
 add_custom_target(compile_dialog ALL
-  DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/dialog/libdialog.a")
+  DEPENDS "dialog/libdialog.a")
 
-add_library(sqlite3 STATIC "${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/sqlite3.c")
-
+add_library(sqlite3 STATIC "sqlite3/sqlite3.c")

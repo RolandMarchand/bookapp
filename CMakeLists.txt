@@ -14,6 +14,6 @@ foreach(SUBDIR dialog sqlite3)
 endforeach()
 
 add_executable(backendapp main.c)
-target_link_libraries(backendapp sqlite3 dialog ncurses m)
+target_link_libraries(backendapp sqlite3 dialog ncurses m pthread dl)
 add_dependencies(backendapp compile_dialog)
 
