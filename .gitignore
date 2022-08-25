@@ -51,13 +51,14 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Dialog
 build/
-dialog/config.log
-dialog/config.status
-dialog/dialog
-dialog/dialog-config
-dialog/dlg_config.h
-dialog/headers-sh
-dialog/makefile
-dialog/man2html.tmp
+
+# Dialog
+thirdparty/dialog/config.log
+thirdparty/dialog/config.status
+thirdparty/dialog/dialog
+thirdparty/dialog/dialog-config
+thirdparty/dialog/dlg_config.h
+thirdparty/dialog/headers-sh
+thirdparty/dialog/makefile
+thirdparty/dialog/man2html.tmp
