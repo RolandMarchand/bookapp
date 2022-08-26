@@ -135,6 +135,16 @@ void setup_db()
 pages INTEGER, path TEXT);", NULL, NULL, &message);
 }
 
+char open_quit()
+{
+	char defaultno = dialog_vars.defaultno;
+	dialog_vars.defaultno = 1;
+	char answer = !dialog_yesno("Quitting",
+			"Are you sure you want to quit?", 6, 30);
+	dialog_vars.defaultno = defaultno;
+	return answer;
+}
+
 int main(int argc, char **argv)
 {
 	if (argc != 1) {
@@ -165,7 +175,7 @@ int main(int argc, char **argv)
 		case 'R': open_read(); break;
 		case 'A': while(open_add()); break;
 		case 'D': open_delete(); break;
-		case 'Q': quit = 1;
+		case 'Q': quit = open_quit();
 		}
 	} while (!quit);
 
