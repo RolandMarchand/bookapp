@@ -123,7 +123,7 @@ void open_delete()
 
 void setup_db()
 {
-	fclose(fopen(DB_TMP, "w"));
+	fclose(fopen(DB_TMP, "a"));
 	
 	int err = sqlite3_open(DB_TMP, &db);
 	if (err) {
