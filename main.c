@@ -11,11 +11,14 @@
 #define VOLUME_MAX 8
 #define PAGES_MAX 8
 #define DB_TMP "/tmp/db.tmp"
-#define EXIT(exit_status)			\
-	do {					\
-		sqlite3_close(db);		\
-		end_dialog();			\
-		exit(exit_status);		\
+#define EXIT(exit_status)					\
+	do {							\
+		fprintf(stderr, "%s\n", sqlite3_errmsg(db));	\
+		dialog_msgbox("SQL Error",			\
+				sqlite3_errmsg(db), 30, 60, 1);	\
+		sqlite3_close(db);				\
+		end_dialog();					\
+		exit(exit_status);				\
 	} while (0)
 
 char quit = 0;
@@ -124,8 +127,6 @@ void setup_db()
 	
 	int err = sqlite3_open(DB_TMP, &db);
 	if (err) {
-		fprintf(stderr, "Can't open database: %s\n",
-			sqlite3_errmsg(db));
 		EXIT(EXIT_FAILURE);
 	}
 	
