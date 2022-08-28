@@ -190,5 +190,7 @@ int main(void)
 		}
 	} while (!quit);
 
-	EXIT(EXIT_SUCCESS);
+	sqlite3_close(db);
+	end_dialog();
+	exit(EXIT_SUCCESS);
 }
