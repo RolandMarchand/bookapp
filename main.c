@@ -29,7 +29,7 @@ void open_read()
 
 }
 
-int open_add()
+int open_add(void)
 {
 	dlg_clear();
 	*dialog_vars.input_result = '\0';
@@ -121,7 +121,7 @@ void open_delete()
 
 }
 
-void setup_db()
+void setup_db(void)
 {
 	fclose(fopen(DB_TMP, "a"));
 	
@@ -136,7 +136,7 @@ void setup_db()
 pages INTEGER, path TEXT);", NULL, NULL, &message);
 }
 
-char open_quit()
+char open_quit(void)
 {
 	char defaultno = dialog_vars.defaultno;
 	dialog_vars.defaultno = 1;
@@ -146,12 +146,8 @@ char open_quit()
 	return answer;
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
-	if (argc != 1) {
-		fprintf(stderr, "Usage: %s\n", argv[0]);
-	}
-
 	setup_db();
 
 	dialog_vars.erase_on_exit = 1;
