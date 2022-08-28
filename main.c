@@ -21,6 +21,20 @@
 		exit(exit_status);				\
 	} while (0)
 
+struct book {
+	char *id;
+	char *title;
+	char *author;
+	char *volume;
+	char *pages;
+	char *path;
+};
+
+struct library {
+	struct book *books;
+        size_t count;
+};
+
 char quit = 0;
 sqlite3 *db;
 
