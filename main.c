@@ -158,7 +158,7 @@ int main(void)
 	do {
 		dlg_clear();
 		if (dialog_vars.input_result) {
-			*dialog_vars.input_result = 0;
+			*dialog_vars.input_result = '\0';
 		}
 		dialog_menu("Main Menu", "Welcome to BookApp!", 7, 50, 0, 4,
 			    (char*[]){
