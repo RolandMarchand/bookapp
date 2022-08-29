@@ -179,7 +179,32 @@ void empty_library(struct library *lib)
 
 void open_delete(void)
 {
+	*dialog_vars.input_result = '\0';
+	struct library lib;
+	fill_library(&lib);
 
+	/* format the items for dialog_checklist */
+	char *items[lib.count * 3];
+	for (int i = 0; i < lib.count; i++) {
+		/* the item's formatting is 'Title, Author' */
+		int size = strlen(lib.books[i].title)
+			+ strlen(lib.books[i].author)
+			+ 3;  /* ', ' and '\0' */
+		char (*title)[size] = malloc(sizeof(char[size]));
+		sprintf((char*)title, "%s, %s",
+			lib.books[i].title, lib.books[i].author);
+
+		items[i * 3] = lib.books[i].id;
+		items[i * 3 + 1] = (char*)title;
+		items[i * 3 + 2] = "";
+	}
+
+	dialog_checklist("Delete", "Selects the books you want gone from your library.", 30, 60, 0, lib.count, items, FLAG_CHECK);
+
+	for (int i = 1; i < lib.count; i += 3) {
+		free(items[i]);
+	}
+	empty_library(&lib);
 }
 
 void setup_db(void)
