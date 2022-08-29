@@ -130,7 +130,54 @@ Volume: %s\nPages: %s\nPath: %s",
 	return 0;
 }
 
-void open_delete()
+static int sqlite_query_library(void *library, int argc, char **argv, char **col_name)
+{
+	enum {ID = 0, TITLE, AUTHOR, VOLUME, PAGES, PATH};
+	struct library *lib = library;
+	lib->count += 1;
+	lib->books = reallocarray(lib->books, lib->count, sizeof(struct book));
+
+	struct book *book = &lib->books[lib->count - 1];
+	book->id = strdup(argv[ID]);
+	book->title = strdup(argv[TITLE]);
+	book->author = strdup(argv[AUTHOR]);
+	book->volume = strdup(argv[VOLUME]);
+	book->pages = strdup(argv[PAGES]);
+	book->path = strdup(argv[PATH]);
+
+	return 0;
+}
+
+int fill_library(struct library *lib)
+{
+	lib->count = 0;
+	lib->books = calloc(0, sizeof(struct book));
+
+	char *msg;
+	int err = sqlite3_exec(db, "SELECT id, title, author, volume, pages, \
+ path FROM books ORDER BY title ASC", sqlite_query_library, lib, &msg);
+
+	if (err == SQLITE_OK) return 0;
+	fprintf(stderr, "%s\n", msg);
+	dialog_msgbox("SQL Error", msg, 30, 60, 1);
+	sqlite3_free(msg);
+	return 1;
+}
+
+void empty_library(struct library *lib)
+{
+	while (lib->count--) {
+		free(lib->books[lib->count].id);
+		free(lib->books[lib->count].title);
+		free(lib->books[lib->count].author);
+		free(lib->books[lib->count].volume);
+		free(lib->books[lib->count].pages);
+		free(lib->books[lib->count].path);
+	};
+	free(lib->books);
+}
+
+void open_delete(void)
 {
 
 }
