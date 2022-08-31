@@ -100,15 +100,18 @@ Use the arrow keys to change field.",
 	/* ask user to verify imput */
 	char yesno_msg[5120] = {0};
 	sprintf(yesno_msg, "Does this look okay?\n\nTitle: %s\nAuthor: %s\n\
-Volume: %s\nPages: %s\nPath: %s",
-		book.title, book.author, book.volume, book.pages,
+Volume: %d\nPages: %d\nPath: %s",
+		book.title, book.author, atoi(book.volume), atoi(book.pages),
 		get_input());
 	char no = dialog_yesno("Verification", yesno_msg, 30, 60);
 	if (no) return 1;
 
-	/* add book to database  */
+	/* add book to database */
 	char *sql_query = yesno_msg;
-	sprintf(sql_query, "INSERT INTO books (title, author, volume, pages, path) VALUES(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\");", book.title, book.author, book.volume, book.pages, get_input());
+        sprintf(sql_query,
+		"INSERT INTO books (title, author, volume, pages, path) \
+VALUES(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\");",
+		book.title, book.author, book.volume, book.pages, get_input());
 	char *errmsg;
 	int err = sqlite3_exec(db, sql_query, NULL, NULL, &errmsg);
 	if (err != SQLITE_OK) {
@@ -117,6 +120,10 @@ Volume: %s\nPages: %s\nPath: %s",
 		return 1;
 	}
 
+	free(book.title);
+	free(book.author);
+	free(book.volume);
+	free(book.pages);
 	dialog_msgbox("Success!", "Your book has been added to the library.",
 		      6, 30, 1);
 	return 0;
