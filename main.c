@@ -72,29 +72,14 @@ Use the arrow keys to change field.",
 			    "5", "16"
 		    });
 
-	char title[TITLE_MAX] = {0};
-	char author[AUTHOR_MAX] = {0};
-	char volume[VOLUME_MAX] = {0};
-	char pages[PAGES_MAX] = {0};
-
-	int offset = 0;
-	for (int i = 0; i < 4; i++) {
-		char *end = strchr(dialog_vars.input_result + offset, '\n');
-		int length = end - (dialog_vars.input_result + offset);
-
-		char *data;
-		int max = 0;
-		switch (i) {
-		case 0: data = title; max = TITLE_MAX; break;
-		case 1: data = author; max = AUTHOR_MAX; break;
-		case 2: data = volume; max = VOLUME_MAX; break;
-		case 3: data = pages; max = PAGES_MAX; break;
-		}
-		
-		strncpy(data,
-			dialog_vars.input_result + offset,
-			(length < max) ? length : max);
-		offset += length + 1;
+	/* write input to `book` */
+	struct book book;
+	char **data[4] = {&book.title, &book.author, &book.volume, &book.pages};
+	char i = 0;
+	for (char *str = strtok(get_input(), "\n"); str; str = strtok(NULL, "\n")) {
+		*data[i] = calloc(strlen(str) + 1, sizeof(char));
+		strcpy(*data[i], str);
+		i++;
 	}
 
 	/* append '/' at the end of $HOME */
@@ -111,14 +96,14 @@ Use the arrow keys to change field.",
 	char yesno_msg[5120] = {0};
 	sprintf(yesno_msg, "Does this look okay?\n\nTitle: %s\nAuthor: %s\n\
 Volume: %s\nPages: %s\nPath: %s",
-		title, author, volume, pages,
+		book.title, book.author, book.volume, book.pages,
 		get_input());
 	char no = dialog_yesno("Verification", yesno_msg, 30, 60);
 	if (no) return 1;
 
 	/* add book to database  */
 	char *sql_query = yesno_msg;
-	sprintf(sql_query, "INSERT INTO books (title, author, volume, pages, path) VALUES(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\");", title, author, volume, pages, get_input());
+	sprintf(sql_query, "INSERT INTO books (title, author, volume, pages, path) VALUES(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\");", book.title, book.author, book.volume, book.pages, get_input());
 	char *errmsg;
 	int err = sqlite3_exec(db, sql_query, NULL, NULL, &errmsg);
 	if (err != SQLITE_OK) {
