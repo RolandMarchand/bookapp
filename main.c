@@ -38,7 +38,7 @@ struct library {
 sqlite3 *db;
 
 /* alias for dynamic pointer dialog_vars.input_result */
-char *get_input() { return dialog_vars.input_result; }
+char *get_input(void) { return dialog_vars.input_result; }
 
 void open_read()
 {
