@@ -48,8 +48,9 @@ void open_read()
 int open_add(void)
 {
 	dlg_clear();
-	*get_input() = '\0';
 	dialog_vars.default_button = -1;
+get_form:
+	*get_input() = '\0';
         dialog_form("New Book", "Enter the details of the new book\
 , so that it can be added to your library.\n\n\
 Use the arrow keys to change field.",
@@ -71,6 +72,10 @@ Use the arrow keys to change field.",
 			    "", "4", "9",
 			    "5", "16"
 		    });
+	if (*get_input() == '\n' || strstr(get_input(), "\n\n")) {
+		dialog_msgbox("Error", "Please fill in all the fields.", 6, 20, 1);
+		goto get_form;
+	}
 
 	/* write input to `book` */
 	struct book book;
