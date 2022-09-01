@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(BackendApp VERSION 0.1
+project(Bookapp VERSION 0.1
   LANGUAGES C)
 
 set(THIRDPARTY_DIR "${PROJECT_SOURCE_DIR}/thirdparty")
@@ -13,7 +13,9 @@ foreach(SUBDIR dialog sqlite3)
   link_directories("${THIRDPARTY_DIR}/${SUBDIR}")
 endforeach()
 
-add_executable(backendapp main.c)
-target_link_libraries(backendapp sqlite3 dialog ncurses m pthread dl)
-add_dependencies(backendapp compile_dialog)
+add_library(books STATIC "books.c")
+
+add_executable(bookapp main.c)
+target_link_libraries(bookapp sqlite3 dialog books ncurses m pthread dl)
+add_dependencies(bookapp compile_dialog)
 

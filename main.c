@@ -1,3 +1,5 @@
+#include "books.h"
+
 #include <dialog.h>
 #include <sqlite3.h>
 
@@ -6,43 +8,72 @@
 #include <unistd.h>
 #include <limits.h>
 
-#define TITLE_MAX 256
-#define AUTHOR_MAX 128
-#define VOLUME_MAX 8
-#define PAGES_MAX 8
+#define RESET_INPUT() do { *get_input() = '\0'; } while (0)
+#define INPUT_EMPTY() (!*get_input())
+#define DLG_X 60
+#define DLG_Y 30
 #define DB_TMP "/tmp/db.tmp"
 #define EXIT(exit_status)					\
 	do {							\
 		fprintf(stderr, "%s\n", sqlite3_errmsg(db));	\
 		dialog_msgbox("SQL Error",			\
-				sqlite3_errmsg(db), 30, 60, 1);	\
+			sqlite3_errmsg(db), 0, 0, 1);		\
 		sqlite3_close(db);				\
 		end_dialog();					\
 		exit(exit_status);				\
 	} while (0)
-
-struct book {
-	char *id;
-	char *title;
-	char *author;
-	char *volume;
-	char *pages;
-	char *path;
-};
-
-struct library {
-	struct book *books;
-        size_t count;
-};
 
 sqlite3 *db;
 
 /* alias for dynamic pointer dialog_vars.input_result */
 char *get_input(void) { return dialog_vars.input_result; }
 
-void open_read()
+void open_read(void)
 {
+	RESET_INPUT();
+	struct library lib;
+	fill_library(&lib);
 
+	if (!lib.count) {
+		dialog_msgbox("Warning", "You have no books to read", 0, 0, 1);
+		return;
+	}
+
+	/* generate seventh argument of dialog_menu */
+	char *items[lib.count * 3];
+	for (int i = 0; i < lib.count; i++) {
+		/* each book is displayed as 'Title, Author vVolume' */
+		int size = strlen(lib.books[i].title)
+			+ strlen(lib.books[i].author)
+			+ strlen(lib.books[i].volume)
+			+ 5;  /* ', ' ' v' and '\0' */
+		char (*descr)[size] = malloc(sizeof(char[size]));
+		sprintf((char*)descr, "%s, %s v%s",
+			lib.books[i].title, lib.books[i].author,
+			lib.books[i].volume);
+
+		items[i * 3] = lib.books[i].id;
+		items[i * 3 + 1] = (char*)descr;
+		items[i * 3 + 2] = "";
+	}
+
+	dialog_menu("Read", "Choose a book you want to read.",
+		    DLG_Y, DLG_X, 0, lib.count, items);
+
+	/* free item description */
+	for (int i = 1; i < lib.count; i += 3) {
+		free(items[i]);
+        }
+
+	char *title, *path;
+	for (int i = 0; i < lib.count; i++) {
+		if (strcmp(lib.books[i].id, get_input())) continue;
+		title = lib.books[i].title;
+		path = lib.books[i].path;
+	}
+	dlg_clear();
+	dialog_textbox(title, path, 0, 0);
+	empty_library(&lib);
 }
 
 int open_add(void)
@@ -50,7 +81,7 @@ int open_add(void)
 	dlg_clear();
 	dialog_vars.default_button = -1;
 get_form:
-	*get_input() = '\0';
+	RESET_INPUT();
         dialog_form("New Book", "Enter the details of the new book\
 , so that it can be added to your library.\n\n\
 Use the arrow keys to change field.",
@@ -73,7 +104,8 @@ Use the arrow keys to change field.",
 			    "5", "16"
 		    });
 	if (*get_input() == '\n' || strstr(get_input(), "\n\n")) {
-		dialog_msgbox("Error", "Please fill in all the fields.", 6, 20, 1);
+		dialog_msgbox("Error", "Please fill in all the fields.",
+			0, 0, 1);
 		goto get_form;
 	}
 
@@ -94,28 +126,30 @@ Use the arrow keys to change field.",
 	fhome[strlen(home)] = '/';
 
 	dialog_vars.default_button = -3;
-	dialog_fselect("Find Book", fhome, 15, 60);
+	dialog_fselect("Find Book", fhome, DLG_Y, DLG_X * 2);
 
-	/* TODO, check for duplicate and ask user if it's okay */
 	/* ask user to verify imput */
 	char yesno_msg[5120] = {0};
 	sprintf(yesno_msg, "Does this look okay?\n\nTitle: %s\nAuthor: %s\n\
 Volume: %d\nPages: %d\nPath: %s",
 		book.title, book.author, atoi(book.volume), atoi(book.pages),
 		get_input());
-	char no = dialog_yesno("Verification", yesno_msg, 30, 60);
-	if (no) return 1;
+	dlg_clear();
+	char no = dialog_yesno("Verification", yesno_msg, DLG_Y, DLG_X);
+	if (no) return 1; /* loop */
 
-	/* add book to database */
+	/* format SQL query */
 	char *sql_query = yesno_msg;
         sprintf(sql_query,
 		"INSERT INTO books (title, author, volume, pages, path) \
-VALUES(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\");",
-		book.title, book.author, book.volume, book.pages, get_input());
+VALUES(\"%s\", \"%s\", \"%d\", \"%d\", \"%s\");",
+		book.title, book.author, atoi(book.volume), atoi(book.pages), get_input());
+
+	/* run SQL query */
 	char *errmsg;
 	int err = sqlite3_exec(db, sql_query, NULL, NULL, &errmsg);
 	if (err != SQLITE_OK) {
-		dialog_msgbox("SQL Error", errmsg, 6, 30, 1);
+		dialog_msgbox("SQL Error", errmsg, 0, 0, 1);
 		sqlite3_free(errmsg);
 		return 1;
 	}
@@ -125,86 +159,74 @@ VALUES(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\");",
 	free(book.volume);
 	free(book.pages);
 	dialog_msgbox("Success!", "Your book has been added to the library.",
-		      6, 30, 1);
+		0, 0, 1);
 	return 0;
-}
-
-static int sqlite_query_library(void *library, int argc, char **argv, char **col_name)
-{
-	enum {ID = 0, TITLE, AUTHOR, VOLUME, PAGES, PATH};
-	struct library *lib = library;
-	lib->count += 1;
-	lib->books = reallocarray(lib->books, lib->count, sizeof(struct book));
-
-	struct book *book = &lib->books[lib->count - 1];
-	book->id = strdup(argv[ID]);
-	book->title = strdup(argv[TITLE]);
-	book->author = strdup(argv[AUTHOR]);
-	book->volume = strdup(argv[VOLUME]);
-	book->pages = strdup(argv[PAGES]);
-	book->path = strdup(argv[PATH]);
-
-	return 0;
-}
-
-int fill_library(struct library *lib)
-{
-	lib->count = 0;
-	lib->books = calloc(0, sizeof(struct book));
-
-	char *errmsg;
-	int err = sqlite3_exec(db, "SELECT id, title, author, volume, pages, \
- path FROM books ORDER BY title ASC", sqlite_query_library, lib, &errmsg);
-
-	if (err == SQLITE_OK) return 0;
-	fprintf(stderr, "%s\n", errmsg);
-	dialog_msgbox("SQL Error", errmsg, 30, 60, 1);
-	sqlite3_free(errmsg);
-	return 1;
-}
-
-void empty_library(struct library *lib)
-{
-	while (lib->count--) {
-		free(lib->books[lib->count].id);
-		free(lib->books[lib->count].title);
-		free(lib->books[lib->count].author);
-		free(lib->books[lib->count].volume);
-		free(lib->books[lib->count].pages);
-		free(lib->books[lib->count].path);
-	};
-	free(lib->books);
 }
 
 void open_delete(void)
 {
-	*get_input() = '\0';
+	RESET_INPUT();
 	struct library lib;
 	fill_library(&lib);
+
+	if (!lib.count) {
+		dialog_msgbox("Warning", "You have no books to delete.",
+			0, 0, 1);
+		return;
+	}
 
 	/* format the items for dialog_checklist */
 	char *items[lib.count * 3];
 	for (int i = 0; i < lib.count; i++) {
-		/* the item's formatting is 'Title, Author' */
+		/* the item's formatting is 'Title, Author vVolume' */
 		int size = strlen(lib.books[i].title)
 			+ strlen(lib.books[i].author)
-			+ 3;  /* ', ' and '\0' */
-		char (*title)[size] = malloc(sizeof(char[size]));
-		sprintf((char*)title, "%s, %s",
-			lib.books[i].title, lib.books[i].author);
+			+ strlen(lib.books[i].volume)
+			+ 5;  /* ', ' ' v' and '\0' */
+		char (*descr)[size] = malloc(sizeof(char[size]));
+		sprintf((char*)descr, "%s, %s v%s",
+			lib.books[i].title, lib.books[i].author,
+			lib.books[i].volume);
 
 		items[i * 3] = lib.books[i].id;
-		items[i * 3 + 1] = (char*)title;
+		items[i * 3 + 1] = (char*)descr;
 		items[i * 3 + 2] = "";
 	}
 
-
-	dialog_checklist("Delete", "Selects the books you want gone from your library.",
-			30, 60, 0, lib.count, items, FLAG_CHECK);
+	dialog_checklist("Delete",
+			"Selects the books you want gone from your library.",
+			 DLG_Y, DLG_X, 0, lib.count, items, FLAG_CHECK);
+	/* free item description */
 	for (int i = 1; i < lib.count; i += 3) {
 		free(items[i]);
 	}
 	empty_library(&lib);
+
+	if (INPUT_EMPTY()) return;
+
+	/* format SQL query */
+	int size = 25; /* length of DELETE query */
+	char *query = calloc(size, sizeof(char));
+	strcpy(query, "DELETE FROM books WHERE ");
+	for (char *str = strtok(get_input(), " "); str; str = strtok(NULL, " ")) {
+		size += strlen("ID IS ") + strlen(str) + strlen(" OR ");
+		query = reallocarray(query, size, sizeof(char));
+		if (!query) {
+			perror("SQL query formatting failed\n");
+			exit(EXIT_FAILURE);
+		}
+		sprintf(query, "%s%s%s%s", query, "ID IS ", str, " OR ");
+	}
+	query[size - 5] = '\0';
+
+	/* SQL DELETE query */
+	char *errmsg;
+	int err = sqlite3_exec(db, query, NULL, NULL, &errmsg);
+	if (err != SQLITE_OK) {
+		dialog_msgbox("SQL Error", errmsg, 0, 0, 1);
+		sqlite3_free(errmsg);
+	}
+	free(query);
 }
 
 void setup_db(void)
@@ -227,7 +249,8 @@ char open_quit(void)
 	char defaultno = dialog_vars.defaultno;
 	dialog_vars.defaultno = 1;
 	char answer = !dialog_yesno("Quitting",
-			"Are you sure you want to quit?", 6, 30);
+			"Are you sure you want to quit?",
+			0, 0);
 	dialog_vars.defaultno = defaultno;
 	return answer;
 }
@@ -245,9 +268,10 @@ int main(void)
 	do {
 		dlg_clear();
 		if (get_input()) {
-			*get_input() = '\0';
+			RESET_INPUT();
 		}
-		dialog_menu("Main Menu", "Welcome to BookApp!", 7, 50, 0, 4,
+		dialog_menu("Main Menu", "Welcome to BookApp!",
+			    7, 0, 0, 4,
 			    (char*[]){
 				    "READ", "Read a book from your library",
 				    "ADD", "Add a book to your library",
